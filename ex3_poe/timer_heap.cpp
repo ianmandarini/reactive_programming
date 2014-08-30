@@ -4,8 +4,13 @@
 
 void timerHeapInitialize(TimerHeap* timer_heap)
 {
-	Serial.println("timerHeapInitialize");
 	timer_heap->size = 0;
+}
+
+void timerCopy(Timer* x, Timer* y)
+{
+	x->time_stamp = y->time_stamp;
+	x->function = y->function;
 }
 
 Timer* timerHeapTop(TimerHeap* timer_heap)
@@ -68,7 +73,7 @@ static void downAdjustment(TimerHeap* timer_heap,int position)
 		int min_time = min_son->time_stamp;
 		int min_son_number = 0;
 
-		if(son(position,1) >= timer_heap->size)
+		if(son(position,1) < timer_heap->size)
 		{
 			Timer* other_son = &(timer_heap->timers[son(position,1)]);
 			if(other_son->time_stamp < min_time)
@@ -102,12 +107,10 @@ void timerHeapPopTop(TimerHeap* timer_heap)
 	(timer_heap->timers[0]).time_stamp = (timer_heap->timers[timer_heap->size]).time_stamp;
 	(timer_heap->timers[0]).function = (timer_heap->timers[timer_heap->size]).function;
 	downAdjustment(timer_heap,0);
-	return;
 }
 
 void timerHeapPush(TimerHeap* timer_heap, unsigned long time_stamp, void (*function)(void))
 {
-	Serial.println("timerHeapPush");
 	(timer_heap->timers[timer_heap->size]).time_stamp = time_stamp;
 	(timer_heap->timers[timer_heap->size]).function = function;
 	upAdjustment(timer_heap,timer_heap->size);

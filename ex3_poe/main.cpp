@@ -1,46 +1,64 @@
 #include "event_driven.h"
 #include "Arduino.h"
-#define LED_PIN 13
+#define RED_LED_PIN 13
+#define YELLOW_LED_PIN 8
 
-void turnLedOn();
-void turnLedOff();
+void turnRedLedOn();
+void turnRedLedOff();
 
-void turnLedOn()
+void turnRedLedOn()
 {
-	digitalWrite(LED_PIN,HIGH);
-	Serial.println("TURN LED ON");
-	timer_set(1000,turnLedOff);
+	Serial.println("RED ON");
+	digitalWrite(RED_LED_PIN,HIGH);
+	timer_set(1000,turnRedLedOff);
 }
 
-void turnLedOff()
+void turnRedLedOff()
 {
-	digitalWrite(LED_PIN,LOW);
-	Serial.println("TURN LED OFF");
-	timer_set(500,turnLedOn);
+	Serial.println("RED OFF");
+	digitalWrite(RED_LED_PIN,LOW);
+	timer_set(1000,turnRedLedOn);
+}
+
+void turnYellowLedOn();
+void turnYellowLedOff();
+
+void turnYellowLedOn()
+{
+	Serial.println("YELLOW ON");
+	digitalWrite(YELLOW_LED_PIN,HIGH);
+	timer_set(300,turnYellowLedOff);
+}
+
+void turnYellowLedOff()
+{
+	Serial.println("YELLOW OFF");
+	digitalWrite(YELLOW_LED_PIN,LOW);
+	timer_set(300,turnYellowLedOn);
+}
+
+void testLed(int led_pin)
+{
+	digitalWrite(led_pin,HIGH);
+	delay(1000);
+	digitalWrite(led_pin,LOW);
+	delay(200);
+	digitalWrite(led_pin,HIGH);
+	delay(1000);
+	digitalWrite(led_pin,LOW);
 }
 
 void initialize()
 {
-	Serial.println("START INITIALIZATION");
-	pinMode(LED_PIN,OUTPUT);
+	pinMode(RED_LED_PIN,OUTPUT);
+	pinMode(YELLOW_LED_PIN,OUTPUT);
 
-	digitalWrite(LED_PIN,HIGH);
-	// Test LED
-	digitalWrite(LED_PIN,HIGH);
-	delay(1000);
-	digitalWrite(LED_PIN,LOW);
-	delay(200);
-	digitalWrite(LED_PIN,HIGH);
-	delay(200);
-	digitalWrite(LED_PIN,LOW);
-	delay(200);
-	digitalWrite(LED_PIN,HIGH);
-	delay(1000);
-	digitalWrite(LED_PIN,LOW);
-	delay(200);
-	digitalWrite(LED_PIN,HIGH);
+	testLed(RED_LED_PIN);
+	testLed(YELLOW_LED_PIN);
 
-	Serial.println("SET TIMER");
-	timer_set(500,turnLedOn);
-	Serial.println("END INITIALIZATION");
+	digitalWrite(RED_LED_PIN,HIGH);
+	digitalWrite(YELLOW_LED_PIN,HIGH);
+
+	timer_set(1000,turnRedLedOff);
+	timer_set(300,turnYellowLedOff);
 }

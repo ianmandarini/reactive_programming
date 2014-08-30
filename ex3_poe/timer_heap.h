@@ -18,6 +18,7 @@ struct timerHeap
 typedef struct timerHeap TimerHeap;
 
 void timerHeapInitialize(TimerHeap* timer_heap);
+void timerCopy(Timer* x, Timer* y);
 Timer* timerHeapTop(TimerHeap* timer_heap);
 unsigned long timerGetTimeStamp(Timer* timer);
 void timerRunFunction(Timer* timer);
