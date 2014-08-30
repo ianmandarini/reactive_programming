@@ -4,7 +4,7 @@
 #include "main.cpp"
 
 TimerHeap timer_heap;
-int current_time;
+unsigned long current_time;
 
 /*
 void button_listen(int pin)
@@ -13,9 +13,12 @@ void button_listen(int pin)
 }
 */
 
-void timer_set(int time_in_ms, void (*function)(void))
+void timer_set(unsigned long time_in_ms, void (*function)(void))
 {
-	int time_stamp = millis() + time_in_ms;
+	unsigned long time_stamp = millis() + time_in_ms;
+	Serial.print("NEW TIMER FUNCTION ADDED -> ");
+	Serial.print(time_stamp);
+	Serial.println("ms");
 	timerHeapPush(&timer_heap,time_stamp,function);
 }
 
@@ -23,23 +26,39 @@ void initialize();
 
 void setup()
 {
+	Serial.begin(9600);
+	Serial.println("PROGRAM INITIALIZED");
 	current_time = millis();
 	timerHeapInitialize(&timer_heap);
 
 	initialize();
-	Serial.begin(9600);
 }
 
 void loop()
 {
-	Serial.println("Loop");
 	current_time = millis();
 
 	Timer* heap_top = timerHeapTop(&timer_heap);
-	while(timerGetTimeStamp(heap_top) >= current_time)
+	if(heap_top != NULL)
 	{
-		timerRunFunction(heap_top);
-		timerHeapPopTop(&timer_heap);
-		heap_top = timerHeapTop(&timer_heap);
+		/*
+		Serial.println("NOT NULL");
+		Serial.print(timerGetTimeStamp(heap_top));
+		Serial.print(" ");
+		Serial.print(current_time);
+		Serial.println("ms");
+		*/
+		while(current_time >= timerGetTimeStamp(heap_top))
+		{
+			timerRunFunction(heap_top);
+			timerHeapPopTop(&timer_heap);
+			Serial.println(timer_heap.size);
+			heap_top = timerHeapTop(&timer_heap);
+			if(heap_top == NULL) break;
+		}
+	}
+	else
+	{
+		//Serial.println("NULL");
 	}
 }

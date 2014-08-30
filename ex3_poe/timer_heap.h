@@ -5,7 +5,7 @@
 
 struct timer
 {
-	int time_stamp;
+	unsigned long time_stamp;
 	void (*function)(void);
 };
 typedef struct timer Timer;
@@ -19,9 +19,9 @@ typedef struct timerHeap TimerHeap;
 
 void timerHeapInitialize(TimerHeap* timer_heap);
 Timer* timerHeapTop(TimerHeap* timer_heap);
-int timerGetTimeStamp(Timer* timer);
+unsigned long timerGetTimeStamp(Timer* timer);
 void timerRunFunction(Timer* timer);
 void timerHeapPopTop(TimerHeap* timer_heap);
-void timerHeapPush(TimerHeap* timer_heap, int time_stamp, void (*function)(void));
+void timerHeapPush(TimerHeap* timer_heap, unsigned long time_stamp, void (*function)(void));
 
 #endif
