@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
-#include <vector>
+#include <list>
 #include <stdlib.h>
 
 #define PI 3.14f
@@ -18,11 +18,21 @@
 #define TST_GRAV 1
 #define GEN_GRAV 2
 #define KIL_COLI 4
+#define DAMAGES 8
+#define IGNORE_BORDER 16
+#define IGNORE_COLISION 32
 
 #define FACING_SPEED 3*PI
 #define ENGINE_ACC 1000.0f
 
 #define BOUNCE_DESACC 0.5f
+
+#define SHT_SPD 600.0f
+#define SHT_RATE 400
+#define SHT_RADIUS 10.0f
+
+#define TOP_BAR_HEI 100
+#define SCORE_STEP 320
 
 using namespace std;
 
@@ -50,9 +60,12 @@ typedef struct element Element;
 int err;
 SDL_Window* window;
 SDL_Renderer* renderer;
-vector<Element*> world;
+list<Element*> world;
 Element* player1;
 Element* player2;
+unsigned long time_til_next_shot_p1 =0;
+unsigned long time_til_next_shot_p2 =0;
+int score;
 
 void draw(Element* e)
 {
@@ -87,42 +100,49 @@ float dist(Vec2* v,Vec2* w)
 void updatePositions(unsigned long _dt)
 {
     float dt = ((float) _dt) / 1000.0f;
-    for(int i=0;i<world.size();i++)
+    for(list<Element*>::iterator it=world.begin(); it != world.end(); it++)
     {
-        world[i]->pos.x += world[i]->spd.x*dt;
-        world[i]->pos.y += world[i]->spd.y*dt;
+        (*it)->pos.x += (*it)->spd.x*dt;
+        (*it)->pos.y += (*it)->spd.y*dt;
 
-        world[i]->spd.x += world[i]->acc.x*dt;
-        world[i]->spd.y += world[i]->acc.y*dt;
+        (*it)->spd.x += (*it)->acc.x*dt;
+        (*it)->spd.y += (*it)->acc.y*dt;
     }
 }
 
-void colideBorder(Element* e)
+bool colideBorder(Element* e)
 {
+    if(e->flags & IGNORE_BORDER) return false;
+    bool col = false;
     if(e->pos.x + e->r > RESX)
     {
         e->pos.x = RESX - e->r;
         e->spd.x = -BOUNCE_DESACC * abs(e->spd.x);
+        col = true;
     }
     if(e->pos.y + e->r > RESY)
     {
         e->pos.y = RESY - e->r;
         e->spd.y = -BOUNCE_DESACC *abs(e->spd.y);
+        col = true;
     }
 
     if(e->pos.x - e->r < 0)
     {
         e->pos.x = 0 + e->r;
         e->spd.x = BOUNCE_DESACC * abs(e->spd.x);
+        col = true;
     }
-    if(e->pos.y - e->r < 0)
+    if(e->pos.y - e->r < TOP_BAR_HEI)
     {
-        e->pos.y = 0 + e->r;
+        e->pos.y = TOP_BAR_HEI+ e->r;
         e->spd.y = BOUNCE_DESACC * abs(e->spd.y);
+        col = true;
     } 
+    return col;
 }
 
-void colideElements(Element* a,Element* b)
+bool colideElements(Element* a,Element* b)
 {
     if( dist(&(a->pos),&(b->pos)) < (a->r + b->r))
     {
@@ -137,38 +157,54 @@ void colideElements(Element* a,Element* b)
 
         a->spd.x *= BOUNCE_DESACC;
         a->spd.y *= BOUNCE_DESACC;
+
+        if(a==player1 && b->flags & DAMAGES){ score-=SCORE_STEP; b->flags-=DAMAGES; }
+        if(a==player2 && b->flags & DAMAGES){ score+=SCORE_STEP; b->flags-=DAMAGES; }
+        if(b==player1 && a->flags & DAMAGES){ score-=SCORE_STEP; a->flags-=DAMAGES; }
+        if(b==player2 && a->flags & DAMAGES){ score+=SCORE_STEP; a->flags-=DAMAGES; }
+
+        return true;
     }
+    return false;
 }
 
 
 void colision()
 {
-    for(int i=0;i<world.size();i++)
+    for(list<Element*>::iterator it=world.begin(); it != world.end(); it++)
     {
-        colideBorder(world[i]);
-        for(int j=0;j<world.size();j++)
+        if((*it)->flags & IGNORE_COLISION) continue;
+        if(colideBorder((*it)) && (*it)->flags & KIL_COLI){ delete (*it); world.erase(it); };
+        for(list<Element*>::iterator jt=world.begin(); jt != world.end(); jt++)
         {
-            if(i==j) continue;
-            colideElements(world[i],world[j]);
+            if(it==jt) continue;
+            if(colideElements((*it),(*jt)))
+            {
+                if((*it)->flags & KIL_COLI)
+                {
+                    delete (*it);
+                    world.erase(it);
+                }
+            };
         }
     }
 }
 
 void gravity()
 {
-    for(int i=0;i<world.size();i++)
+    for(list<Element*>::iterator it=world.begin(); it != world.end(); it++)
     {
-        if(world[i]->flags & TST_GRAV)
+        if((*it)->flags & TST_GRAV)
         {
-            world[i]->acc.x = 0.0f;
-            world[i]->acc.y = 0.0f;
-            for(int j=0;j<world.size();j++)
+            (*it)->acc.x = 0.0f;
+            (*it)->acc.y = 0.0f;
+            for(list<Element*>::iterator jt=world.begin(); jt != world.end(); jt++)
             {
-                if(i==j) continue;
-                if(!(world[j]->flags & GEN_GRAV)) continue;
-                float dist2 = (world[i]->pos.y-world[j]->pos.y)*(world[i]->pos.y-world[j]->pos.y)+(world[i]->pos.x-world[j]->pos.x)*(world[i]->pos.x-world[j]->pos.x);
-                world[i]->acc.x += 100*world[j]->mass/dist2*(world[j]->pos.x-world[i]->pos.x);
-                world[i]->acc.y += 100*world[j]->mass/dist2*(world[j]->pos.y-world[i]->pos.y);
+                if(it==jt) continue;
+                if(!((*jt)->flags & GEN_GRAV)) continue;
+                float dist2 = ((*it)->pos.y-(*jt)->pos.y)*((*it)->pos.y-(*jt)->pos.y)+((*it)->pos.x-(*jt)->pos.x)*((*it)->pos.x-(*jt)->pos.x);
+                (*it)->acc.x += 100*(*jt)->mass/dist2*((*jt)->pos.x-(*it)->pos.x);
+                (*it)->acc.y += 100*(*jt)->mass/dist2*((*jt)->pos.y-(*it)->pos.y);
             }
         }
     }
@@ -176,9 +212,9 @@ void gravity()
 
 void drawElements()
 {
-    for(int i=0;i<world.size();i++)
+    for(list<Element*>::iterator it=world.begin(); it != world.end(); it++)
     {
-        draw(world[i]);
+        draw((*it));
     }
 }
 
@@ -200,6 +236,13 @@ void keyboardManagement(unsigned long _dt)
     if(state[SDL_SCANCODE_RIGHT]){
             player1->facing += FACING_SPEED*dt;
     }
+    if(state[SDL_SCANCODE_SPACE] && (signed long)time_til_next_shot_p1<=0){
+        Element shot = {{player1->pos.x+2*player1->r*cos(player1->facing),player1->pos.y+2*player1->r*sin(player1->facing)},{player1->spd.x+SHT_SPD*cos(player1->facing),player1->spd.y+SHT_SPD*sin(player1->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHT_RADIUS,0,CIRCLE,TST_GRAV | KIL_COLI | DAMAGES,0};
+        Element* nshot = new Element;
+        *nshot = shot;
+        world.push_front(nshot);
+        time_til_next_shot_p1 = SHT_RATE;
+    }
     if(player1->facing>2*PI) player1->facing -= 2*PI;
     else if(player1->facing<0) player1->facing += 2*PI;
     if(player2->facing>2*PI) player2->facing -= 2*PI;
@@ -220,40 +263,72 @@ void mouseManagement(unsigned long _dt)
             player2->spd.x += ENGINE_ACC*cos(player2->facing)*dt;
             player2->spd.y += ENGINE_ACC*sin(player2->facing)*dt;
     }
+    if(state & SDL_BUTTON(SDL_BUTTON_LEFT) && (signed long)time_til_next_shot_p2<=0){
+        Element shot = {{player2->pos.x+2*player2->r*cos(player2->facing),player2->pos.y+2*player2->r*sin(player2->facing)},{player2->spd.x+SHT_SPD*cos(player2->facing),player2->spd.y+SHT_SPD*sin(player2->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHT_RADIUS,0,CIRCLE,TST_GRAV | KIL_COLI | DAMAGES,0};
+        Element* nshot = new Element;
+        *nshot = shot;
+        world.push_front(nshot);
+        time_til_next_shot_p2 = SHT_RATE;;
+    }
+}
+
+void displayScore()
+{
+
+    SDL_Rect p1 = { 0, 0, score, TOP_BAR_HEI };
+    SDL_Rect p2 = { score, 0, RESX-score, TOP_BAR_HEI };
+    SDL_SetRenderDrawColor(renderer, player1->rgba[0],player1->rgba[1],player1->rgba[2],player1->rgba[3]);
+    SDL_RenderFillRect(renderer, &p1);
+    SDL_SetRenderDrawColor(renderer, player2->rgba[0],player2->rgba[1],player2->rgba[2],player2->rgba[3]);
+    SDL_RenderFillRect(renderer, &p2);
 }
 
 void display()
 {
     SDL_SetRenderDrawColor(renderer, 0x00,0x00,0x00,0x00);
     SDL_RenderFillRect(renderer, NULL);
-
     drawElements(); 
+    displayScore();
     SDL_RenderPresent(renderer); 
 }
 
+
 int main (int argc, char* args[])
 {
+    if(argc!=2){ printf("Error: Map Name Missing!!!\nSyntax Expected: <.exe name> <.map path file>\n"); return 1; }
+
+    unsigned long last_time = SDL_GetTicks();
+    unsigned long new_time;
+    unsigned long time_elapsed;
+    score = RESX/2;
+
+    FILE* map = fopen(args[1],"r");
+    if(map==NULL){ printf("Error: Map Not Found!!!\n"); return 1; }
+
+    Element _player1 = {{0,0},{0,0},{0,0},{0xFF,0x00,0x00,0x00},30,30,SHIP,TST_GRAV,0};
+    fscanf(map," %f %f",&_player1.pos.x,&_player1.pos.y);
+    Element _player2 = {{0,0},{0,0},{0,0},{0x00,0x00,0xFF,0x00},30,30,SHIP,TST_GRAV,0};
+    fscanf(map," %f %f",&_player2.pos.x,&_player2.pos.y);
+    player1 = &_player1;
+    player2 = &_player2;
+    world.push_back(player1);
+    world.push_back(player2);
+    Element circ = {{0,0},{0,0},{0,0},{0,0,0,0},0,0,CIRCLE,0,0};
+    while(fscanf(map," %f %f %f %f %f %f %d %d %d %d %f %f %d",&circ.pos.x,&circ.pos.y,&circ.spd.x,&circ.spd.y,&circ.acc.x,&circ.acc.y,&circ.rgba[0],&circ.rgba[1],&circ.rgba[2],&circ.rgba[3],&circ.r,&circ.mass,&circ.flags)==13)
+    {      
+        Element* ncirc = new Element;
+        *ncirc = circ;
+        //printf(" %f %f %f %f %f %f %d %d %d %d %f %f %d\n",ncirc->pos.x,ncirc->pos.y,ncirc->spd.x,ncirc->spd.y,ncirc->acc.x,ncirc->acc.y,ncirc->rgba[0],ncirc->rgba[1],ncirc->rgba[2],ncirc->rgba[3],ncirc->r,ncirc->mass,ncirc->flags);
+        world.push_back(ncirc);
+    }
+    fclose(map);
+
     err = SDL_Init(SDL_INIT_EVERYTHING);
     assert(err == 0);
     window = SDL_CreateWindow("Game 3200x1800",0, 0, RESX, RESY, SDL_WINDOW_FULLSCREEN);
     assert(window != NULL);
     renderer = SDL_CreateRenderer(window, -1, 0);
     assert(renderer != NULL);
-
-    unsigned long last_time = SDL_GetTicks();
-    unsigned long new_time;
-    unsigned long time_elapsed;
-
-    Element ball = {{2100,900},{0,-300},{0,0},{0x99,0x00,0xBB,0x00},100,300,CIRCLE,GEN_GRAV | TST_GRAV,0};
-    Element ball2 = {{1600,900},{0,0},{0,0},{0x99,0x55,0x3B,0x00},200,1000,CIRCLE,GEN_GRAV,0};
-    Element _player1 = {{200,900},{0,0},{0,0},{0xFF,0x00,0x00,0x00},30,30,SHIP,TST_GRAV,0};
-    Element _player2 = {{3000,900},{0,0},{0,0},{0x00,0x00,0xFF,0x00},30,30,SHIP,TST_GRAV,0};
-    player1 = &_player1;
-    player2 = &_player2;
-    world.push_back(player1);
-    world.push_back(player2);
-    world.push_back(&ball);
-    world.push_back(&ball2);
     SDL_Event e;
 
     while (1)
@@ -271,6 +346,9 @@ int main (int argc, char* args[])
         colision();
         gravity();
         display();
+        if((signed long)time_til_next_shot_p1>0) time_til_next_shot_p1-=time_elapsed;
+        if((signed long)time_til_next_shot_p2>0) time_til_next_shot_p2-=time_elapsed;
+        if(score >= RESX || score <= 0){ break; }
 
         last_time = new_time;
     }
