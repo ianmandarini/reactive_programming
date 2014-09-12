@@ -38,7 +38,7 @@ O Jogo:
 	Os tiros também são afetados pela gravidade.
 
 	Os tiros desaparecem ao colidir com objetos no mapa pela segunda vez.
-	Na primeira colisão do tiro, o tiro reflete. Na colisão do tiro com as bordas do mapa, o tiro é destruído.
+	Na primeira colisão do tiro, o tiro reflete.
 	Quando um tiro atinge um jogador, a barra no topo avança no sentido do jogador inimigo. Neste caso, o tiro é destruído imediatamente.
 	Quando um jogador colide com um objeto, ele possui sua trajetória refletida.
 	Quando um jogador colide com a borda do mapa, ele possui sua trajetória refletida.

@@ -183,12 +183,12 @@ void colideElements(Element* a,Element* b)
     if(a==player1 && b->flags & DAMAGES)
     {
         score-=(int)(SCORE_STEP*resolution_x);
-        b->flags = b->flags | KILL_ON_COLISION;
+        //b->flags = b->flags | KILL_ON_COLISION;
     }
     if(a==player2 && b->flags & DAMAGES)
     {
         score+=(int)(SCORE_STEP*resolution_x);
-        b->flags = b->flags | KILL_ON_COLISION;
+        //b->flags = b->flags | KILL_ON_COLISION;
     }
 }
 
