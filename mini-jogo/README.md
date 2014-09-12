@@ -26,8 +26,6 @@ Mapas Disponíveis:
 		Um único planeta fixo no centro.
 	repulsion.map:
 		Um grande planeta no topo que repele os jogadores ao invés de atrair.
-	sun.map:
-		Um único corpo fixo no centro que danifica as naves dos jogadores quando em contato.
 
 #######################################
 O Jogo:

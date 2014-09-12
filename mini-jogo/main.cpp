@@ -5,11 +5,9 @@
 #include <stdio.h>
 #include <list>
 #include <stdlib.h>
+#include <string.h>
 
 #define PI 3.14f
-
-#define RESX 3200
-#define RESY 1800
 
 #define SHIP 1
 #define CIRCLE 2
@@ -25,21 +23,24 @@
 #define DESACC_ON_COLISION 128
 
 #define FACING_SPEED 3*PI
-#define ENGINE_ACC 1000.0f
+#define ENGINE_ACC 0.3f
 #define BOUNCE_DESACC 0.5f
 
-#define SHIP_RADIUS 40.0f
+#define SHIP_RADIUS 0.015f
 #define P1_COLOR {0xFF,0x00,0x00,0x00}
 #define P2_COLOR {0x30,0xD0,0xFF,0x00}
 
-#define SHOT_SPEED 800.0f
-#define SHOT_RATE 400
-#define SHOT_RADIUS 15.0f
+#define SHOT_SPEED 0.25
+#define SHOT_RATE 0.125
+#define SHOT_RADIUS 0.007f
 
-#define TOP_BAR_HEIGHT 100
-#define SCORE_STEP 320
+#define TOP_BAR_HEIGHT 0.03f
+#define SCORE_STEP 0.1f
 
 using namespace std;
+
+int resolution_x; // 3200
+int resolution_y; // 1800
 
 struct vec2
 {
@@ -120,16 +121,16 @@ bool colideBorder(Element* e)
     if(e->flags & IGNORE_COLISION) return false;
     if(e->flags & IGNORE_BORDER) return false;
     bool col = false;
-    if(e->pos.x + e->r > RESX)
+    if(e->pos.x + e->r > resolution_x)
     {
-        e->pos.x = RESX - e->r;
+        e->pos.x = resolution_x - e->r;
         e->spd.x = -abs(e->spd.x);
         if(e->flags & DESACC_ON_COLISION) e->spd.x *= BOUNCE_DESACC;
         col = true;
     }
-    if(e->pos.y + e->r > RESY)
+    if(e->pos.y + e->r > resolution_y)
     {
-        e->pos.y = RESY - e->r;
+        e->pos.y = resolution_y - e->r;
         e->spd.y = -abs(e->spd.y);
         if(e->flags & DESACC_ON_COLISION) e->spd.y *= BOUNCE_DESACC;
         col = true;
@@ -141,9 +142,9 @@ bool colideBorder(Element* e)
         if(e->flags & DESACC_ON_COLISION) e->spd.x *= BOUNCE_DESACC;
         col = true;
     }
-    if(e->pos.y - e->r < TOP_BAR_HEIGHT)
+    if(e->pos.y - e->r < (int) (TOP_BAR_HEIGHT*(resolution_x+resolution_y)/2.0))
     {
-        e->pos.y = TOP_BAR_HEIGHT+ e->r;
+        e->pos.y = (int) (TOP_BAR_HEIGHT*(resolution_x+resolution_y)/2.0)+ e->r;
         e->spd.y = abs(e->spd.y);
         if(e->flags & DESACC_ON_COLISION) e->spd.y *= BOUNCE_DESACC;
         col = true;
@@ -168,8 +169,8 @@ void colideElements(Element* a,Element* b)
         a->spd.x = -(a->spd.x - proj.x) + proj.x;
         a->spd.y = -(a->spd.y - proj.y) + proj.y;
     }
-    a->pos.x += a->spd.x*0.01;
-    a->pos.y += a->spd.y*0.01;
+    a->pos.x += a->spd.x*0.06;
+    a->pos.y += a->spd.y*0.06;
     //a->pos.x += 10*(a->pos.x - b->pos.x)/sqrt((a->pos.x - b->pos.x)*(a->pos.x - b->pos.x)+(a->pos.y - b->pos.y)*(a->pos.y - b->pos.y));
     //a->pos.y += 10*(a->pos.y - b->pos.y)/sqrt((a->pos.x - b->pos.x)*(a->pos.x - b->pos.x)+(a->pos.y - b->pos.y)*(a->pos.y - b->pos.y));
 
@@ -181,12 +182,12 @@ void colideElements(Element* a,Element* b)
 
     if(a==player1 && b->flags & DAMAGES)
     {
-        score-=SCORE_STEP;
+        score-=(int)(SCORE_STEP*resolution_x);
         b->flags = b->flags | KILL_ON_COLISION;
     }
     if(a==player2 && b->flags & DAMAGES)
     {
-        score+=SCORE_STEP;
+        score+=(int)(SCORE_STEP*resolution_x);
         b->flags = b->flags | KILL_ON_COLISION;
     }
 }
@@ -259,8 +260,8 @@ void gravity()
                 if(it==jt) continue;
                 if(!((*jt)->flags & GENERATE_GRAVITY)) continue;
                 float dist2 = ((*it)->pos.y-(*jt)->pos.y)*((*it)->pos.y-(*jt)->pos.y)+((*it)->pos.x-(*jt)->pos.x)*((*it)->pos.x-(*jt)->pos.x);
-                (*it)->acc.x += 100*(*jt)->mass/dist2*((*jt)->pos.x-(*it)->pos.x);
-                (*it)->acc.y += 100*(*jt)->mass/dist2*((*jt)->pos.y-(*it)->pos.y);
+                (*it)->acc.x += resolution_x*100*(*jt)->mass/dist2*((*jt)->pos.x-(*it)->pos.x);
+                (*it)->acc.y += resolution_y*100*(*jt)->mass/dist2*((*jt)->pos.y-(*it)->pos.y);
             }
         }
     }
@@ -279,13 +280,13 @@ void keyboardManagement(unsigned long _dt)
     float dt = ((float) _dt) / 1000.0f;
     if(state[SDL_SCANCODE_UP])
     {
-        player1->spd.x += ENGINE_ACC*cos(player1->facing)*dt;
-        player1->spd.y += ENGINE_ACC*sin(player1->facing)*dt;
+        player1->spd.x += ENGINE_ACC*(resolution_x+resolution_y)/2.0*cos(player1->facing)*dt;
+        player1->spd.y += ENGINE_ACC*(resolution_x+resolution_y)/2.0*sin(player1->facing)*dt;
     }
     if(state[SDL_SCANCODE_DOWN])
     {
-        player1->spd.x -= ENGINE_ACC*cos(player1->facing)*dt;
-        player1->spd.y -= ENGINE_ACC*sin(player1->facing)*dt;
+        player1->spd.x -= ENGINE_ACC*(resolution_x+resolution_y)/2.0*cos(player1->facing)*dt;
+        player1->spd.y -= ENGINE_ACC*(resolution_x+resolution_y)/2.0*sin(player1->facing)*dt;
     }
     if(state[SDL_SCANCODE_LEFT])
     {
@@ -297,10 +298,10 @@ void keyboardManagement(unsigned long _dt)
     }
     if(state[SDL_SCANCODE_SPACE] && (signed long)time_til_next_shot_p1<=0)
     {
-        Element shot = {{player1->pos.x+2*player1->r*cos(player1->facing),player1->pos.y+2*player1->r*sin(player1->facing)},{player1->spd.x+SHOT_SPEED*cos(player1->facing),player1->spd.y+SHOT_SPEED*sin(player1->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHOT_RADIUS,0,CIRCLE,TEST_FOR_GRAVITY | BOUNCE_ONCE | DAMAGES,0};
+        Element shot = {{player1->pos.x+2*player1->r*cos(player1->facing),player1->pos.y+2*player1->r*sin(player1->facing)},{player1->spd.x+SHOT_SPEED*(resolution_x+resolution_y)/2.0*cos(player1->facing),player1->spd.y+SHOT_SPEED*(resolution_x+resolution_y)/2.0*sin(player1->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHOT_RADIUS*(resolution_x+resolution_y)/2.0,0,CIRCLE,TEST_FOR_GRAVITY | BOUNCE_ONCE | DAMAGES,0};
         Element* nshot = new Element; *nshot = shot;
         world.push_front(nshot);
-        time_til_next_shot_p1 = SHOT_RATE;
+        time_til_next_shot_p1 = SHOT_RATE*(resolution_x+resolution_y)/2.0;
     }
     if(player1->facing>2*PI) player1->facing -= 2*PI;
     else if(player1->facing<0) player1->facing += 2*PI;
@@ -319,21 +320,21 @@ void mouseManagement(unsigned long _dt)
     }
     if(state & SDL_BUTTON(SDL_BUTTON_RIGHT))
     {
-        player2->spd.x += ENGINE_ACC*cos(player2->facing)*dt;
-        player2->spd.y += ENGINE_ACC*sin(player2->facing)*dt;
+        player2->spd.x += ENGINE_ACC*(resolution_x+resolution_y)/2.0*cos(player2->facing)*dt;
+        player2->spd.y += ENGINE_ACC*(resolution_x+resolution_y)/2.0*sin(player2->facing)*dt;
     }
     if(state & SDL_BUTTON(SDL_BUTTON_LEFT) && (signed long)time_til_next_shot_p2<=0)
     {
-        Element shot = {{player2->pos.x+2*player2->r*cos(player2->facing),player2->pos.y+2*player2->r*sin(player2->facing)},{player2->spd.x+SHOT_SPEED*cos(player2->facing),player2->spd.y+SHOT_SPEED*sin(player2->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHOT_RADIUS,0,CIRCLE,TEST_FOR_GRAVITY | BOUNCE_ONCE | DAMAGES,0};
+        Element shot = {{player2->pos.x+2*player2->r*cos(player2->facing),player2->pos.y+2*player2->r*sin(player2->facing)},{player2->spd.x+SHOT_SPEED*(resolution_x+resolution_y)/2.0*cos(player2->facing),player2->spd.y+SHOT_SPEED*(resolution_x+resolution_y)/2.0*sin(player2->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHOT_RADIUS*(resolution_x+resolution_y)/2.0,0,CIRCLE,TEST_FOR_GRAVITY | BOUNCE_ONCE | DAMAGES,0};
         Element* nshot = new Element; *nshot = shot;
         world.push_front(nshot);
-        time_til_next_shot_p2 = SHOT_RATE;;
+        time_til_next_shot_p2 = SHOT_RATE*(resolution_x+resolution_y)/2.0;;
     }
 }
 void displayScore()
 {
-    SDL_Rect p1 = { 0, 0, score, TOP_BAR_HEIGHT };
-    SDL_Rect p2 = { score, 0, RESX-score, TOP_BAR_HEIGHT };
+    SDL_Rect p1 = { 0, 0, score, (int) (TOP_BAR_HEIGHT*(resolution_x+resolution_y)/2.0) };
+    SDL_Rect p2 = { score, 0, resolution_x-score, (int) (TOP_BAR_HEIGHT*(resolution_x+resolution_y)/2.0) };
     SDL_SetRenderDrawColor(renderer, player1->rgba[0],player1->rgba[1],player1->rgba[2],player1->rgba[3]);
     SDL_RenderFillRect(renderer, &p1);
     SDL_SetRenderDrawColor(renderer, player2->rgba[0],player2->rgba[1],player2->rgba[2],player2->rgba[3]);
@@ -351,29 +352,37 @@ void display()
 
 int main (int argc, char* args[])
 {
-    if(argc!=2)
+    if(argc!=5)
     { 
-        printf("Error: Map Name Missing!!!\nSyntax Expected: <.exe name> <.map path file>\n");
+        printf("Error: Map Name Missing!!!\nSyntax Expected: <.exe name> <Resolution X> <Resolution Y> <Fullscreen? y/n> <.map path file>\n");
         return 1;
     }
+
+    resolution_x = atoi(args[1]);
+    resolution_y = atoi(args[2]);
 
     unsigned long last_time = SDL_GetTicks();
     unsigned long new_time;
     unsigned long time_elapsed;
 
-    score = RESX/2;
+    score = resolution_x/2;
 
-    FILE* map = fopen(args[1],"r");
+    FILE* map = fopen(args[4],"r");
     if(map==NULL)
     {
         printf("Error: Map Not Found!!!\n");
         return 1;
     }
 
-    Element _player1 = {{0,0},{0,0},{0,0},P1_COLOR,SHIP_RADIUS,30,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
+    Element _player1 = {{0,0},{0,0},{0,0},P1_COLOR,SHIP_RADIUS*(resolution_x+resolution_y)/2.0,0,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
     fscanf(map," %f %f",&_player1.pos.x,&_player1.pos.y);
-    Element _player2 = {{0,0},{0,0},{0,0},P2_COLOR,SHIP_RADIUS,30,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
+    Element _player2 = {{0,0},{0,0},{0,0},P2_COLOR,SHIP_RADIUS*(resolution_x+resolution_y)/2.0,0,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
     fscanf(map," %f %f",&_player2.pos.x,&_player2.pos.y);
+
+    _player1.pos.x *= resolution_x;
+    _player1.pos.y *= resolution_y;
+    _player2.pos.x *= resolution_x;
+    _player2.pos.y *= resolution_y;
 
     player1 = &_player1;
     player2 = &_player2;
@@ -384,6 +393,13 @@ int main (int argc, char* args[])
     Element circ = {{0,0},{0,0},{0,0},{0,0,0,0},0,0,CIRCLE,0,0};
     while(fscanf(map," %f %f %f %f %f %f %d %d %d %d %f %f %d",&circ.pos.x,&circ.pos.y,&circ.spd.x,&circ.spd.y,&circ.acc.x,&circ.acc.y,&circ.rgba[0],&circ.rgba[1],&circ.rgba[2],&circ.rgba[3],&circ.r,&circ.mass,&circ.flags)==13)
     {      
+        circ.pos.x *= resolution_x;
+        circ.pos.y *= resolution_y;
+        circ.spd.x *= resolution_x;
+        circ.spd.y *= resolution_y;
+        circ.acc.x *= resolution_x;
+        circ.acc.y *= resolution_y;
+        circ.r *= (resolution_x+resolution_y)/2.0f;
         Element* ncirc = new Element;
         *ncirc = circ;
         world.push_back(ncirc);
@@ -392,7 +408,8 @@ int main (int argc, char* args[])
 
     err = SDL_Init(SDL_INIT_EVERYTHING);
     assert(err == 0);
-    window = SDL_CreateWindow("Game 3200x1800",0, 0, RESX, RESY, SDL_WINDOW_FULLSCREEN);
+    if(strcmp(args[3],"y")==0) window = SDL_CreateWindow("Space Ball", resolution_x/10, resolution_y/10, resolution_x, resolution_y, SDL_WINDOW_FULLSCREEN);
+    else window = SDL_CreateWindow("Game 3200x1800",resolution_x/10, resolution_y/10, resolution_x, resolution_y, 0);
     assert(window != NULL);
     renderer = SDL_CreateRenderer(window, -1, 0);
     assert(renderer != NULL);
@@ -416,7 +433,7 @@ int main (int argc, char* args[])
         display();
         if((signed long)time_til_next_shot_p1>0) time_til_next_shot_p1-=time_elapsed;
         if((signed long)time_til_next_shot_p2>0) time_til_next_shot_p2-=time_elapsed;
-        if(score >= RESX || score <= 0)
+        if(score >= resolution_x || score <= 0)
         {
             break;
         }
