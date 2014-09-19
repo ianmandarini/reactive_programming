@@ -31,7 +31,7 @@
 #define P2_COLOR {0x30,0xD0,0xFF,0x00}
 
 #define SHOT_SPEED 0.25
-#define SHOT_RATE 0.125
+#define SHOT_RATE 150
 #define SHOT_RADIUS 0.007f
 
 #define TOP_BAR_HEIGHT 0.03f
@@ -75,6 +75,22 @@ unsigned long time_til_next_shot_p1 = 0;
 unsigned long time_til_next_shot_p2 = 0;
 
 int score;
+
+bool r_pressed = false;
+bool game_close = false;
+
+void drawChar(char c)
+{
+    if(c == 'R')
+    {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+        SDL_RenderDrawLine(renderer,resolution_x*0.4,resolution_y*0.8,resolution_x*0.4,resolution_y*0.2);
+        SDL_RenderDrawLine(renderer,resolution_x*0.4,resolution_y*0.2,resolution_x*0.6,resolution_y*0.2);
+        SDL_RenderDrawLine(renderer,resolution_x*0.6,resolution_y*0.2,resolution_x*0.6,resolution_y*0.4);
+        SDL_RenderDrawLine(renderer,resolution_x*0.6,resolution_y*0.4,resolution_x*0.4,resolution_y*0.4);
+        SDL_RenderDrawLine(renderer,resolution_x*0.5,resolution_y*0.4,resolution_x*0.6,resolution_y*0.8);
+    }
+}
 
 void draw(Element* e)
 {
@@ -278,6 +294,10 @@ void keyboardManagement(unsigned long _dt)
 {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
     float dt = ((float) _dt) / 1000.0f;
+    if(state[SDL_SCANCODE_ESCAPE])
+    {
+        game_close = true;
+    }
     if(state[SDL_SCANCODE_UP])
     {
         player1->spd.x += ENGINE_ACC*(resolution_x+resolution_y)/2.0*cos(player1->facing)*dt;
@@ -301,7 +321,7 @@ void keyboardManagement(unsigned long _dt)
         Element shot = {{player1->pos.x+2*player1->r*cos(player1->facing),player1->pos.y+2*player1->r*sin(player1->facing)},{player1->spd.x+SHOT_SPEED*(resolution_x+resolution_y)/2.0*cos(player1->facing),player1->spd.y+SHOT_SPEED*(resolution_x+resolution_y)/2.0*sin(player1->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHOT_RADIUS*(resolution_x+resolution_y)/2.0,0,CIRCLE,TEST_FOR_GRAVITY | BOUNCE_ONCE | DAMAGES,0};
         Element* nshot = new Element; *nshot = shot;
         world.push_front(nshot);
-        time_til_next_shot_p1 = SHOT_RATE*(resolution_x+resolution_y)/2.0;
+        time_til_next_shot_p1 = SHOT_RATE;
     }
     if(player1->facing>2*PI) player1->facing -= 2*PI;
     else if(player1->facing<0) player1->facing += 2*PI;
@@ -328,7 +348,7 @@ void mouseManagement(unsigned long _dt)
         Element shot = {{player2->pos.x+2*player2->r*cos(player2->facing),player2->pos.y+2*player2->r*sin(player2->facing)},{player2->spd.x+SHOT_SPEED*(resolution_x+resolution_y)/2.0*cos(player2->facing),player2->spd.y+SHOT_SPEED*(resolution_x+resolution_y)/2.0*sin(player2->facing)},{0,0},{0xFF,0x0FF,0xFF,0x00},SHOT_RADIUS*(resolution_x+resolution_y)/2.0,0,CIRCLE,TEST_FOR_GRAVITY | BOUNCE_ONCE | DAMAGES,0};
         Element* nshot = new Element; *nshot = shot;
         world.push_front(nshot);
-        time_til_next_shot_p2 = SHOT_RATE*(resolution_x+resolution_y)/2.0;;
+        time_til_next_shot_p2 = SHOT_RATE;
     }
 }
 void displayScore()
@@ -350,6 +370,43 @@ void display()
     SDL_RenderPresent(renderer); 
 }
 
+void displayR()
+{
+    SDL_SetRenderDrawColor(renderer, 0x00,0x00,0x00,0x00);
+    SDL_RenderFillRect(renderer, NULL);
+    drawChar('R'); 
+    displayScore();
+    SDL_RenderPresent(renderer);   
+}
+
+
+void checkForR()
+{
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
+    if(state[SDL_SCANCODE_R])
+    {
+        r_pressed = true;
+    }
+    if(state[SDL_SCANCODE_ESCAPE])
+    {
+        game_close = true;
+    }
+}
+
+void resetGame()
+{ 
+    for(list<Element*>::iterator it=world.begin(); it != world.end(); it++)
+    {
+        delete (*it);
+        it = world.erase(it);
+        it--;
+        continue;
+    }
+
+    time_til_next_shot_p1 = 0;
+    time_til_next_shot_p2 = 0;
+}
+
 int main (int argc, char* args[])
 {
     if(argc!=5)
@@ -361,84 +418,110 @@ int main (int argc, char* args[])
     resolution_x = atoi(args[1]);
     resolution_y = atoi(args[2]);
 
-    unsigned long last_time = SDL_GetTicks();
+    unsigned long last_time;
     unsigned long new_time;
     unsigned long time_elapsed;
-
-    score = resolution_x/2;
-
-    FILE* map = fopen(args[4],"r");
-    if(map==NULL)
-    {
-        printf("Error: Map Not Found!!!\n");
-        return 1;
-    }
-
-    Element _player1 = {{0,0},{0,0},{0,0},P1_COLOR,SHIP_RADIUS*(resolution_x+resolution_y)/2.0,0,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
-    fscanf(map," %f %f",&_player1.pos.x,&_player1.pos.y);
-    Element _player2 = {{0,0},{0,0},{0,0},P2_COLOR,SHIP_RADIUS*(resolution_x+resolution_y)/2.0,0,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
-    fscanf(map," %f %f",&_player2.pos.x,&_player2.pos.y);
-
-    _player1.pos.x *= resolution_x;
-    _player1.pos.y *= resolution_y;
-    _player2.pos.x *= resolution_x;
-    _player2.pos.y *= resolution_y;
-
-    player1 = &_player1;
-    player2 = &_player2;
-
-    world.push_back(player1);
-    world.push_back(player2);
-
-    Element circ = {{0,0},{0,0},{0,0},{0,0,0,0},0,0,CIRCLE,0,0};
-    while(fscanf(map," %f %f %f %f %f %f %d %d %d %d %f %f %d",&circ.pos.x,&circ.pos.y,&circ.spd.x,&circ.spd.y,&circ.acc.x,&circ.acc.y,&circ.rgba[0],&circ.rgba[1],&circ.rgba[2],&circ.rgba[3],&circ.r,&circ.mass,&circ.flags)==13)
-    {      
-        circ.pos.x *= resolution_x;
-        circ.pos.y *= resolution_y;
-        circ.spd.x *= resolution_x;
-        circ.spd.y *= resolution_y;
-        circ.acc.x *= resolution_x;
-        circ.acc.y *= resolution_y;
-        circ.r *= (resolution_x+resolution_y)/2.0f;
-        Element* ncirc = new Element;
-        *ncirc = circ;
-        world.push_back(ncirc);
-    }
-    fclose(map);
 
     err = SDL_Init(SDL_INIT_EVERYTHING);
     assert(err == 0);
     if(strcmp(args[3],"y")==0) window = SDL_CreateWindow("Space Ball", resolution_x/10, resolution_y/10, resolution_x, resolution_y, SDL_WINDOW_FULLSCREEN);
-    else window = SDL_CreateWindow("Game 3200x1800",resolution_x/10, resolution_y/10, resolution_x, resolution_y, 0);
+    else window = SDL_CreateWindow("Space Ball",resolution_x/10, resolution_y/10, resolution_x, resolution_y, 0);
     assert(window != NULL);
     renderer = SDL_CreateRenderer(window, -1, 0);
     assert(renderer != NULL);
     SDL_Event e;
 
-    while (1)
+    FILE* map;
+
+    while(1)
     {
-        new_time = SDL_GetTicks();
-        time_elapsed = new_time - last_time;
+        last_time = SDL_GetTicks();
 
-        if(SDL_PollEvent(&e))
+        score = resolution_x/2;
+
+        map = fopen(args[4],"r");
+        if(map==NULL)
         {
-            if (e.type == SDL_QUIT) break;
+            printf("Error: Map Not Found!!!\n");
+            return 1;
         }
 
-        keyboardManagement(time_elapsed);
-        mouseManagement(time_elapsed);
-        updatePositions(time_elapsed);
-        colision();
-        gravity();
-        display();
-        if((signed long)time_til_next_shot_p1>0) time_til_next_shot_p1-=time_elapsed;
-        if((signed long)time_til_next_shot_p2>0) time_til_next_shot_p2-=time_elapsed;
-        if(score >= resolution_x || score <= 0)
-        {
-            break;
-        }
+        Element _player1 = {{0,0},{0,0},{0,0},P1_COLOR,SHIP_RADIUS*(resolution_x+resolution_y)/2.0,0,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
+        fscanf(map," %f %f",&_player1.pos.x,&_player1.pos.y);
+        Element _player2 = {{0,0},{0,0},{0,0},P2_COLOR,SHIP_RADIUS*(resolution_x+resolution_y)/2.0,0,SHIP,TEST_FOR_GRAVITY | DESACC_ON_COLISION,0};
+        fscanf(map," %f %f",&_player2.pos.x,&_player2.pos.y);
 
-        last_time = new_time;
+        _player1.pos.x *= resolution_x;
+        _player1.pos.y *= resolution_y;
+        _player2.pos.x *= resolution_x;
+        _player2.pos.y *= resolution_y;
+
+        player1 = &_player1;
+        player2 = &_player2;
+
+        world.push_back(player1);
+        world.push_back(player2);
+
+        Element circ = {{0,0},{0,0},{0,0},{0,0,0,0},0,0,CIRCLE,0,0};
+        while(fscanf(map," %f %f %f %f %f %f %d %d %d %d %f %f %d",&circ.pos.x,&circ.pos.y,&circ.spd.x,&circ.spd.y,&circ.acc.x,&circ.acc.y,&circ.rgba[0],&circ.rgba[1],&circ.rgba[2],&circ.rgba[3],&circ.r,&circ.mass,&circ.flags)==13)
+        {      
+            circ.pos.x *= resolution_x;
+            circ.pos.y *= resolution_y;
+            circ.spd.x *= resolution_x;
+            circ.spd.y *= resolution_y;
+            circ.acc.x *= resolution_x;
+            circ.acc.y *= resolution_y;
+            circ.r *= (resolution_x+resolution_y)/2.0f;
+            Element* ncirc = new Element;
+            *ncirc = circ;
+            world.push_back(ncirc);
+        }
+        fclose(map);
+
+        while (1)
+        {
+            new_time = SDL_GetTicks();
+            time_elapsed = new_time - last_time;
+
+            if(SDL_PollEvent(&e))
+            {
+                if (e.type == SDL_QUIT)
+                {
+                    game_close = true;
+                    break;
+                }
+            }
+
+            keyboardManagement(time_elapsed);
+            mouseManagement(time_elapsed);
+            updatePositions(time_elapsed);
+            colision();
+            gravity();
+            display();
+            if((signed long)time_til_next_shot_p1>0) time_til_next_shot_p1-=time_elapsed;
+            if((signed long)time_til_next_shot_p2>0) time_til_next_shot_p2-=time_elapsed;
+            if(score >= resolution_x || score <= 0)
+            {
+                break;
+            }
+
+            last_time = new_time;
+            if(game_close) break;
+        }
+        if(game_close) break;
+        r_pressed = false;
+        while(r_pressed == false)
+        {
+            if(SDL_PollEvent(&e))
+            {
+                if (e.type == SDL_QUIT) break;
+            }
+            displayR();
+            checkForR();
+            if(game_close) break;
+        }
+        if(game_close) break;
+        resetGame();
     }
     SDL_DestroyWindow(window);
     SDL_Quit();
