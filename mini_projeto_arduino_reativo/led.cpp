@@ -1,11 +1,11 @@
 #include <math.h>
 
-#define MAX_LIGHT_FACTOR 1.1
+#define MAX_LIGHT_FACTOR 0.9
 
 // A sensibilidade pode ser definida por aqui
 //#define NORMALIZE_DISTANCE_FACTOR 0.17 // -> RUIM
 //#define NORMALIZE_DISTANCE_FACTOR 0.10 // -> OK
-#define NORMALIZE_DISTANCE_FACTOR 0.09 // -> BOM
+#define NORMALIZE_DISTANCE_FACTOR 0.06 // -> BOM
 
 #define NUM_SENSORS 4
 #define NUM_ROWS 5
@@ -21,11 +21,11 @@
 
 int sensors[NUM_SENSORS] = {TOP_SENSOR,LEFT_SENSOR,RIGHT_SENSOR,BOT_SENSOR};
 
-int LED_PIN[NUM_ROWS][NUM_COLS] = { 	{49,52,46,47,50},
-										{53,44,45,48,51},
-										{36,42,43,28,24},
-										{32,34,37,22,41},
-										{33,29,26,35,25}		};
+int LED_PIN[NUM_ROWS][NUM_COLS] = { 	{36,48,32,34,44},
+										{46,52,29,38,40},
+										{27,39,33,43,45},
+										{31,42,51,41,50},
+										{47,53,37,35,49}		};
 
 int isLedOn[NUM_ROWS][NUM_COLS];
 
@@ -40,6 +40,26 @@ int timer_blink;
 int timer_read;
 
 int max_light;
+
+void testHardware()
+{
+	for(int i=0;i<NUM_ROWS;i++)
+	{
+		for(int j=0;j<NUM_COLS;j++)
+		{
+			digitalWrite(LED_PIN[i][j],HIGH);
+			delay(50);
+		}
+	}
+	for(int i=0;i<NUM_ROWS;i++)
+	{
+		for(int j=0;j<NUM_COLS;j++)
+		{
+			digitalWrite(LED_PIN[i][j],LOW);
+			delay(50);
+		}
+	}
+}
 
 float distance(int x, int y, int sensor)
 {
@@ -76,13 +96,11 @@ float distance(int x, int y, int sensor)
 
 void setup()
 {
-	Serial.begin(9600);
-
 	for(int i=0;i<NUM_ROWS;i++)
 	{
 		for(int j=0;j<NUM_COLS;j++)
 		{
-			pinMode(LED_PIN[i][j],INPUT);
+			pinMode(LED_PIN[i][j],OUTPUT);
 		}
 	}
 	for(int i=0;i<NUM_SENSORS;i++)
@@ -108,6 +126,8 @@ void setup()
 	leds_on = true;
 	timer_blink = TIME_BLINK;
 	time_now = millis();
+
+	testHardware();
 }
 
 void loop()
@@ -186,7 +206,7 @@ void loop()
 	{
 		for(int j=0;j<NUM_COLS;j++)
 		{
-			digitalWrite(LED_PIN[i][j],isLedOn[i][j]);
+			digitalWrite(LED_PIN[i][j],!isLedOn[i][j]);
 		}
 	}
 }
