@@ -169,39 +169,6 @@ void loop()
 			}
 		}
 	}
-
-/*
-	timer_blink -= time_elapsed;
-	if(timer_blink < 0)
-	{
-		timer_blink = TIME_BLINK;
-		if(leds_on) leds_on = false;
-		else leds_on = true;
-	}
-
-
-	for(int i=0;i<NUM_ROWS;i++)
-	{
-		for(int j=0;j<NUM_COLS;j++)
-		{
-			if(isLedOn[i][j] == HIGH)
-			{
-				if(leds_on)
-				{
-					digitalWrite(LED_PIN[i][j],HIGH);
-				}
-				else
-				{
-					digitalWrite(LED_PIN[i][j],LOW);
-				}
-			}
-			else
-			{
-					digitalWrite(LED_PIN[i][j],LOW);
-			}
-		}
-	}
-*/
 	for(int i=0;i<NUM_ROWS;i++)
 	{
 		for(int j=0;j<NUM_COLS;j++)

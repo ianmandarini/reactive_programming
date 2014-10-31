@@ -1,0 +1,51 @@
+#include "/home/terra/TerraNet_v0.1/terra/TerraNet.defs"
+
+pktype temperatureMessage from radioMsg with
+    var ushort temperature;
+end
+		
+var ushort node_id = getNodeId();
+var ushort father_id = 1;
+
+var ubyte status = 0;
+
+if node_id != 11 then
+	father_id = node_id - 1;
+end
+
+var temperatureMessage message;
+status = qClear();
+
+par do
+	loop do
+		par/and do
+			emit REQ_TEMP();
+			message.temperature = await TEMP;
+			message.source = node_id;
+			status = qPut(message);
+		with
+			await 1s;
+		end
+	end
+with
+	loop do
+		message = await RECEIVE;
+		status = qPut(message);
+	end
+with
+	loop do
+		await Q_READY;
+		loop do
+			if qSize() > 0 then
+				status = qGet(message);
+				message.target = father_id;
+				emit SEND(message);
+				await SEND_DONE;
+			else
+				status = qClear();
+				break;
+			end
+		end
+	end
+end
+

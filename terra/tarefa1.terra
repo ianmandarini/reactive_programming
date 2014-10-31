@@ -1,0 +1,34 @@
+#include "/home/terra/TerraNet_v0.1/terra/TerraNet.defs"
+
+#define PERIOD_READ_TEMPERATURE 2s
+
+//---------------------
+// DEFINE O FORMATO DA MENSAGEM DE RADIO
+//---------------------
+pktype temperatureMessage from radioMsg with
+    var ushort temperature;
+end
+
+// ID DO NO
+var ushort node_id = getNodeId();
+// INSTANCIA DA MENSAGEM
+var temperatureMessage my_message;
+my_message.source = node_id;
+ // O DESTINO SERA A ESTACAO BASE (NO DE VALOR 1)
+my_message.target = 1;
+
+if node_id == 11 then
+	//---------------------
+	// LE REPEDIDAMENTE TEMPERATURA E MANDA RADIO COM MENSAGEM	
+	//---------------------
+	loop do
+		par/and do
+			emit REQ_TEMP();
+			my_message.temperature = await TEMP;
+			emit SEND(my_message);
+			await SEND_DONE;
+		with
+			await PERIOD_READ_TEMPERATURE;
+		end
+	end
+end

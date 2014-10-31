@@ -1,0 +1,89 @@
+#include "/home/terra/TerraNet_v0.1/terra/TerraNet.defs"
+
+pktype temperatureMessage from radioMsg with
+    var ushort temperature;
+	var ushort sender;
+end
+		
+var ushort node_id = getNodeId();
+var ushort father_id = 0;
+
+var temperatureMessage message;
+
+var ubyte status = 0;
+var ushort x;
+var ushort y;
+var ushort this_x;
+var ushort this_y;
+
+status = qClear();
+
+emit LED0(OFF);
+emit LED1(OFF);
+emit LED2(OFF);
+
+if node_id == 11 then
+	emit LED0(ON);
+	father_id = 1;
+end
+
+par do
+	loop do
+		par/and do
+			emit REQ_TEMP();
+			message.temperature = await TEMP;
+			message.source = node_id;
+			message.sender = node_id;
+			message.target = father_id;
+			status = qPut(message);
+		with
+			await 1s;
+		end
+	end
+with
+	loop do
+		message = await RECEIVE;
+		emit LED2(TOGGLE);
+		if father_id == 0 then
+			x = message.sender/10;
+			y = message.sender - (x*10);
+			this_x = node_id/10;
+			this_y = node_id - (this_x*10);
+			if  x <= this_x and y <= this_y then
+				emit LED0(ON);
+				father_id = message.sender;
+			end
+		else
+			if father_id != message.sender then
+				status = qPut(message);
+			end
+		end
+	end
+with
+	loop do
+		await Q_READY;
+		loop do
+			if qSize() > 0 then
+				status = qGet(message);
+
+				if message.target == BROADCAST then
+					message.target = message.sender;
+				else
+					if father_id == 0 then
+						message.target = BROADCAST;
+					else
+						message.target = father_id;
+					end
+				end
+				message.sender = node_id;
+
+				emit SEND(message);
+				await SEND_DONE;
+			else
+				status = qClear();
+				break;
+			end
+		end
+	end
+end
+
