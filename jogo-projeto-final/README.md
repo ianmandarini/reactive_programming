@@ -4,7 +4,7 @@ Jogo de Luta de Plataforma
 	Maurício Pedro Vieira
 
 Linguagens e Plataformas:
- 
+
 	Céu e C
 	SDL
 	Windows
@@ -20,7 +20,7 @@ Features:
 
 Objetivo: 
 
-	Lutar com seu personagem até levar sua vida (HP) a zero.
+	Lutar com seu personagem contra inimigos até levar suas vidas (HP) a zero.
 
 ############################################################
 
