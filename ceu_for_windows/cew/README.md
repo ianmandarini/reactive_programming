@@ -52,7 +52,7 @@ Delete the folder lpeg-0.12
 Clonned Céu GitHub repository from github.com/fsantanna/ceu
 	git clone https://github.com/fsantanna/ceu
 
-Created folder source
+Created folder 'source'
 
 Coded and compiled C program source\ceuc.c
 	mingw\bin\gcc -o ceuc source\ceuc.c
@@ -72,3 +72,59 @@ The program ceuc.exe allows executing lua52\bin\lua.exe with the ceu\ceu file an
 
 Now we can run ceu programs by using "ceuc <file_name>" and executing the a.exe
 
+Clonned Céu SDL GitHub repository from github.com/fsantanna/ceu
+	git clone https://github.com/fsantanna/ceu-sdl
+
+Copied all the content from ceu to ceu-sdl (IMPORTANT: giving precendence to ceu-sdl files)
+
+Downloaded SDL 2.0 Development Libraries for MinGW 32/64-bits
+	https://www.libsdl.org/download-2.0.php
+
+Extracted Folder SDL2-2.0.3
+
+Moved files in SDL2-2.0.3\i686-w64-mingw32\lib to mingw\lib
+	libSDL2.a
+	libSDL2.dll.a
+	libSDL2.la.a
+	libSDL2main.a
+	libSDL2_test.a
+
+Moved folder SDL2 in SDL2-2.0.3\i686-w64-mingw32\include to mingw\include
+
+Moved File SDL2-2.0.3\lib\x86\SDL2.dll to main cew folder
+
+Deleted folder SDL2-2.0.3
+
+Entered in the website
+	https://www.libsdl.org/projects/SDL_ttf/
+	http://www.libsdl.org/projects/SDL_mixer/
+	https://www.libsdl.org/projects/SDL_image/
+
+Downloaded files in Development Libraries section
+	SDL2_ttf-devel-2.0.12-mingw.tar.gz 
+	SDL2_mixer-devel-2.0.0-mingw.tar.gz
+	SDL2_image-devel-2.0.0-mingw.tar.gz
+
+Extracted Folders
+	SDL2_ttf-2.0.12
+	SDL2_mixer-2.0.0
+	SDL2_image-2.0.0
+
+For each folder F above, moved content from
+	F\i686-w64-mingw32\lib to mingw\lib
+	F\i686-w64-mingw32\include to mingw\include
+	F\i686-w64-mingw32\bin DLL Files from F\i686-w64-mingw32\bin to main cew folder
+
+Deleted Folders
+	SDL2_ttf-2.0.12
+	SDL2_mixer-2.0.0
+	SDL2_image-2.0.0
+
+SDL Bug Fix (Download it and move to mingw\include\SDL2)
+https://hg.libsdl.org/SDL/raw-file/e217ed463f25/include/SDL_platform.h 
+
+Coded and compiled C program source\ceuc.c
+	mingw\bin\gcc -o ceucsdl source\ceusdlc.c
+
+Use it as:
+	ceusdlc RELATIVE_PATH
